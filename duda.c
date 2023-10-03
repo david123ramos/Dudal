@@ -2,8 +2,14 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <ctype.h>
+#include <string.h>
+#include <stdbool.h>
 
 #define STACK_CAP 100
+int pos = 0;
+long long stack[STACK_CAP] = {0};
+int stackptr = 0;
+
 
 const char* tokentypedict[] = {
     "INTEGER",
@@ -11,7 +17,8 @@ const char* tokentypedict[] = {
     "MINUS",
     "TIMES",
     "DIV",
-    "SPACE"
+    "SPACE", 
+    "🖨"
 }; 
 
 typedef enum {
@@ -20,54 +27,68 @@ typedef enum {
     MINUS,
     TIMES,
     DIV,
-    SPACE, 
+    SPACE,
+    STDOUT_PRINT 
 } TokenType;
 
 
 typedef struct Token {
     int pos;
-    char value;
+    char *value;
     TokenType type;
 } Token;
 
 
-int pos = 0;
-
-Token* lexer(char curr) {    
-
-    Token *token = (Token *) malloc(sizeof(Token));
-
-    token->pos = pos;
-    token->value = curr;
-
-    if(isdigit(curr)) {
-        token->type = INTEGER;
-    }else if(curr == '+') {
-        token->type = PLUS;
-    }else if(curr == '-') {
-        token->type = MINUS;
-    }else if(curr == '*') {
-        token->type = TIMES;
-    }else if(curr == '/') {
-        token->type = DIV;
-    }else if(isspace(curr)) {
-        token->type = SPACE;
+bool strisdigit(char *str) {
+    for (int i = 0; str[i] != '\0'; i++) {
+        if (!isdigit((unsigned char)str[i])) {
+            return false;
+        }
     }
-    pos++;
-    return token;
+    return true;
 }
 
-long long stack[STACK_CAP] = {0};
-int stackptr = 0;
+bool strisspace(char *str) {
+    for (int i = 0; str[i] != '\0'; i++) {
+        if (!isspace((unsigned char)str[i])) {
+            return false;
+        }
+    }
+    return true;
+}
 
-int char2int(char c) {
-    return c - '0';
+
+
+Token* lexer(char *curr) {    
+
+    Token *token = (Token *) malloc(sizeof(Token));
+    token->value = (char *) malloc(sizeof(char) * strlen(curr));
+    token->pos = pos;
+    strcpy(token->value, curr);
+
+    if(strisdigit(curr)) {
+        token->type = INTEGER;
+    }else if(strcmp(curr, "+") == 0) {
+        token->type = PLUS;
+    }else if(strcmp(curr , "-") == 0) {
+        token->type = MINUS;
+    }else if(strcmp(curr , "*") == 0) {
+        token->type = TIMES;
+    }else if(strcmp(curr , "/") == 0) {
+        token->type = DIV;
+    }else if(strisspace(curr)) {
+        token->type = SPACE;
+    }else if (strcmp(curr , ":") == 0){
+        token->type = STDOUT_PRINT;
+    }
+    
+    return token;
 } 
 
 void eval(Token *token) {
 
     if(token->type == INTEGER) {
-        stack[stackptr] = char2int(token->value);
+        stack[stackptr] = atoi(token->value);
         stackptr++;
 
     }else if(token->type == PLUS) {
@@ -77,7 +98,6 @@ void eval(Token *token) {
  
         stackptr -= 2;
         stack[stackptr] = a + b;
-        printf("%lld\n", stack[stackptr]);
         stackptr++;
 
     }else if(token->type == MINUS) {
@@ -87,7 +107,6 @@ void eval(Token *token) {
 
         stackptr -= 2;
         stack[stackptr] = a - b;
-        printf("%lld\n", stack[stackptr]);
         stackptr++;
 
     }else if(token->type == DIV) {
@@ -97,7 +116,6 @@ void eval(Token *token) {
 
         stackptr -= 2;
         stack[stackptr] = a / b;
-        printf("%lld\n", stack[stackptr]);
         stackptr++;
 
     }else if(token->type == TIMES) {
@@ -107,28 +125,60 @@ void eval(Token *token) {
 
         stackptr -= 2;
         stack[stackptr] = a * b;
-        printf("%lld\n", stack[stackptr]);
         stackptr++;
+    }else if (token->type == STDOUT_PRINT) {
+        printf("%lld\n", stack[stackptr - 1]);
     }
     
+}
+
+char getnextchar(FILE *file) {
+    if(fseek(file, pos, SEEK_SET) != 0) {
+        printf("[LEXER error] internal error on reading .dudal file");
+        fclose(file);
+        return -1;
+    }
+    pos++;
+    return fgetc(file);
 }
 
 void walker(FILE *file) {
 
     char curr;
     do {
-        curr = fgetc(file);
+   
+        curr = getnextchar(file);
+        char *buffer = malloc(sizeof(char) * 100);
+        int bufferptr = 0;
+        buffer[bufferptr] = curr;
+        bufferptr++;
+   
         if(curr == EOF) break;
 
-        Token *t = lexer(curr);
-        
-        // printf("{ value: '%c', type: '%s', pos: '%d' }\n", t->value, tokentypedict[t->type], t->pos);
-        
+        if(isdigit(curr)) {
+
+            char next = getnextchar(file);
+
+            while (isdigit( next ) ) {
+                buffer[bufferptr] = next;
+                bufferptr++;
+                next = getnextchar(file);
+            }
+
+        }
+
+        Token *t = lexer(buffer);
+        // printf("{ value: '%s', type: '%s', pos: '%d' }\n", t->value, tokentypedict[t->type], t->pos);
+                
         eval(t);
         
+        free(t->value);
         free(t);
-
+        free(buffer);
+    
     } while ( curr != EOF );
+    
+
 }
 
 
@@ -138,9 +188,9 @@ void usage() {
 
 int main(int argc, char **argv) {
 
-    assert(argc >= 2);
+    // assert(argc >= 2);
 
-    FILE *file = fopen(argv[1], "r");
+    FILE *file = fopen("test.dudal", "r");
 
     if(file == NULL) {
         printf("[ERROR]: Filename \"%s\" not found\n\n", argv[1]);
@@ -149,6 +199,7 @@ int main(int argc, char **argv) {
     }
 
     walker(file);
+    fclose(file);
 
     return 0;
 }
