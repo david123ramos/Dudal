@@ -17,8 +17,9 @@ const char* tokentypedict[] = {
     "MINUS",
     "TIMES",
     "DIV",
+    "POW"
     "SPACE", 
-    "🖨"
+    ":"
 }; 
 
 typedef enum {
@@ -27,6 +28,7 @@ typedef enum {
     MINUS,
     TIMES,
     DIV,
+    POW,
     SPACE,
     STDOUT_PRINT 
 } TokenType;
@@ -74,6 +76,8 @@ Token* lexer(char *curr) {
         token->type = MINUS;
     }else if(strcmp(curr , "*") == 0) {
         token->type = TIMES;
+    }else if(strcmp(curr , "^") == 0) {
+        token->type = POW;
     }else if(strcmp(curr , "/") == 0) {
         token->type = DIV;
     }else if(strisspace(curr)) {
@@ -125,6 +129,20 @@ void eval(Token *token) {
 
         stackptr -= 2;
         stack[stackptr] = a * b;
+        stackptr++;
+    }else if(token->type == POW) {
+        
+        int a = stack[stackptr - 2];
+        int b = stack[stackptr - 1];
+
+        long int result = 1;
+
+        for(int i = 0; i < b; ++i) {
+            result *= a;
+        }
+
+        stackptr -= 2;
+        stack[stackptr] = result;
         stackptr++;
     }else if (token->type == STDOUT_PRINT) {
         printf("%lld\n", stack[stackptr - 1]);
