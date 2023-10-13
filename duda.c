@@ -18,8 +18,12 @@ const char* tokentypedict[] = {
     "TIMES",
     "DIV",
     "POW"
+    "GREATER_THAN",
+    "LESS_THAN",
+    "EQUALS",
+    "DIFFERENT",
     "SPACE", 
-    ":"
+    "STDOUT_PRINT"
 }; 
 
 typedef enum {
@@ -29,6 +33,10 @@ typedef enum {
     TIMES,
     DIV,
     POW,
+    GREATER_THAN,
+    LESS_THAN,
+    EQUALS,
+    DIFFERENT,
     SPACE,
     STDOUT_PRINT 
 } TokenType;
@@ -82,8 +90,18 @@ Token* lexer(char *curr) {
         token->type = DIV;
     }else if(strisspace(curr)) {
         token->type = SPACE;
+    }else if(strcmp(curr, ">") == 0) {
+        token->type = GREATER_THAN;
+    }else if(strcmp(curr, "<") == 0) {
+        token->type = LESS_THAN;
+    }else if(strcmp(curr, "==") == 0) {
+        token->type = EQUALS;
+    }else if(strcmp(curr, "!=") == 0) {
+        token->type = DIFFERENT;
     }else if (strcmp(curr , ":") == 0){
         token->type = STDOUT_PRINT;
+    }else {
+        assert(false && "Syntax error at %d" && pos);
     }
     
     return token;
@@ -144,6 +162,45 @@ void eval(Token *token) {
         stackptr -= 2;
         stack[stackptr] = result;
         stackptr++;
+
+    }else if(token->type == GREATER_THAN) {
+
+
+        int a = stack[stackptr - 2];
+        int b = stack[stackptr - 1];
+
+        stackptr -= 2;
+        stack[stackptr] = a > b;
+        stackptr++;
+    
+    
+    }else if(token->type == LESS_THAN) {
+        
+        int a = stack[stackptr - 2];
+        int b = stack[stackptr - 1];
+
+        stackptr -= 2;
+        stack[stackptr] = a < b;
+        stackptr++;
+    
+    }else if(token->type == EQUALS) {
+        
+        int a = stack[stackptr - 2];
+        int b = stack[stackptr - 1];
+
+        stackptr -= 2;
+        stack[stackptr] = a == b;
+        stackptr++;
+
+    }else if(token->type == DIFFERENT) {
+      
+        int a = stack[stackptr - 2];
+        int b = stack[stackptr - 1];
+
+        stackptr -= 2;
+        stack[stackptr] = a != b;
+        stackptr++;
+    
     }else if (token->type == STDOUT_PRINT) {
         printf("%lld\n", stack[stackptr - 1]);
     }
@@ -160,33 +217,52 @@ char getnextchar(FILE *file) {
     return fgetc(file);
 }
 
+
+void getcompletedigit(FILE *file, char *buffer){
+
+    char next = getnextchar(file);
+    size_t bufferptr = 1;
+
+    while (isdigit( next ) ) {
+        buffer[bufferptr] = next;
+        bufferptr++;
+        next = getnextchar(file);
+    }
+
+}
+
 void walker(FILE *file) {
 
     char curr;
     do {
    
         curr = getnextchar(file);
+        if(curr == EOF) break; 
+
         char *buffer = malloc(sizeof(char) * 100);
-        int bufferptr = 0;
+        size_t bufferptr = 0;
         buffer[bufferptr] = curr;
         bufferptr++;
-   
-        if(curr == EOF) break;
 
         if(isdigit(curr)) {
+            getcompletedigit(file, buffer);
+        }
 
+        if(curr == '=') {
             char next = getnextchar(file);
+            if(next == '=') {
+                buffer[bufferptr++] = next;
+            } 
+        }
 
-            while (isdigit( next ) ) {
-                buffer[bufferptr] = next;
-                bufferptr++;
-                next = getnextchar(file);
-            }
-
+        if(curr == '!') {
+            char next = getnextchar(file);
+            if(next == '=') {
+                buffer[bufferptr++] = next;
+            } 
         }
 
         Token *t = lexer(buffer);
-        // printf("{ value: '%s', type: '%s', pos: '%d' }\n", t->value, tokentypedict[t->type], t->pos);
                 
         eval(t);
         
@@ -194,8 +270,7 @@ void walker(FILE *file) {
         free(t);
         free(buffer);
     
-    } while ( curr != EOF );
-    
+    } while ( curr != EOF );    
 
 }
 
