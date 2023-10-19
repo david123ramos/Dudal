@@ -22,6 +22,7 @@ const char* tokentypedict[] = {
     "LESS_THAN",
     "EQUALS",
     "DIFFERENT",
+    "IF",
     "SPACE", 
     "STDOUT_PRINT"
 }; 
@@ -37,6 +38,7 @@ typedef enum {
     LESS_THAN,
     EQUALS,
     DIFFERENT,
+    IF,
     SPACE,
     STDOUT_PRINT 
 } TokenType;
@@ -100,6 +102,8 @@ Token* lexer(char *curr) {
         token->type = DIFFERENT;
     }else if (strcmp(curr , ":") == 0){
         token->type = STDOUT_PRINT;
+    }else if (strcmp(curr , "if") == 0){
+        token->type = IF;
     }else {
         // assert(false && "Syntax error at %d" && pos);
     }
@@ -263,6 +267,11 @@ void walker(FILE *file) {
 
         if(curr == '!' && peek(file) == '=') {
             buffer[bufferptr++] = '=';
+            pos++;
+        }
+
+        if(curr == 'i' && peek(file) == 'f') {
+            buffer[bufferptr++] = 'f';
             pos++;
         }
 
