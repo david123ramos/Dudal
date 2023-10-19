@@ -217,6 +217,15 @@ char getnextchar(FILE *file) {
     return fgetc(file);
 }
 
+char peek(FILE *file) {
+    if(fseek(file, pos, SEEK_SET) != 0) {
+        printf("[LEXER error] internal error on reading .dudal file");
+        fclose(file);
+        return -1;
+    }
+    return fgetc(file);
+}
+
 
 void getcompletedigit(FILE *file, char *buffer){
 
@@ -241,25 +250,18 @@ void walker(FILE *file) {
 
         char *buffer = malloc(sizeof(char) * 100);
         size_t bufferptr = 0;
-        buffer[bufferptr] = curr;
-        bufferptr++;
+        buffer[bufferptr++] = curr;
 
         if(isdigit(curr)) {
             getcompletedigit(file, buffer);
         }
 
-        if(curr == '=') {
-            char next = getnextchar(file);
-            if(next == '=') {
-                buffer[bufferptr++] = next;
-            } 
+        if(curr == '=' && peek(file) == '=') {
+            buffer[bufferptr++] = '=';
         }
 
-        if(curr == '!') {
-            char next = getnextchar(file);
-            if(next == '=') {
-                buffer[bufferptr++] = next;
-            } 
+        if(curr == '!' && peek(file) == '=') {
+            buffer[bufferptr++] = '=';
         }
 
         Token *t = lexer(buffer);
