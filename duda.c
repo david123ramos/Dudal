@@ -101,7 +101,7 @@ Token* lexer(char *curr) {
     }else if (strcmp(curr , ":") == 0){
         token->type = STDOUT_PRINT;
     }else {
-        assert(false && "Syntax error at %d" && pos);
+        // assert(false && "Syntax error at %d" && pos);
     }
     
     return token;
@@ -258,10 +258,12 @@ void walker(FILE *file) {
 
         if(curr == '=' && peek(file) == '=') {
             buffer[bufferptr++] = '=';
+            pos++;
         }
 
         if(curr == '!' && peek(file) == '=') {
             buffer[bufferptr++] = '=';
+            pos++;
         }
 
         Token *t = lexer(buffer);
