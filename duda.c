@@ -8,11 +8,14 @@
 #define STACK_CAP 100
 int pos = 0;
 long long stack[STACK_CAP] = {0};
+char *stringstack[STACK_CAP] = {0};
 int stackptr = 0;
+int strstackptr = 0;
 
 
 const char* tokentypedict[] = {
     "INTEGER",
+    "STRING",
     "PLUS",
     "MINUS",
     "TIMES",
@@ -29,6 +32,7 @@ const char* tokentypedict[] = {
 
 typedef enum {
     INTEGER,
+    STRING,
     PLUS,
     MINUS,
     TIMES,
@@ -47,6 +51,7 @@ typedef enum {
 typedef struct Token {
     int pos;
     char *value;
+    int len;
     TokenType type;
 } Token;
 
@@ -67,6 +72,12 @@ bool strisspace(char *str) {
         }
     }
     return true;
+}
+
+void freestringstack(){
+    for(int i =0; i < strstackptr; ++i) {
+        free(stringstack[i]);
+    }
 }
 
 
@@ -104,6 +115,9 @@ Token* lexer(char *curr) {
         token->type = STDOUT_PRINT;
     }else if (strcmp(curr , "if") == 0){
         token->type = IF;
+    }else if(curr[0] == '\'' && curr[strlen(curr) - 1] == '\'') {
+        token->type = STRING;
+        token->len = strlen(curr);
     }else {
         // assert(false && "Syntax error at %d" && pos);
     }
@@ -204,8 +218,18 @@ void eval(Token *token) {
         stackptr -= 2;
         stack[stackptr] = a != b;
         stackptr++;
-    
+
+    }else if(token->type == STRING) {
+
+        stringstack[strstackptr++] = strdup(token->value);
+
     }else if (token->type == STDOUT_PRINT) {
+
+        if(stackptr == 0){
+            printf("%s\n", stringstack[strstackptr -1]);
+            return;
+        }
+
         printf("%lld\n", stack[stackptr - 1]);
     }
     
@@ -244,6 +268,17 @@ void getcompletedigit(FILE *file, char *buffer){
 
 }
 
+void getcompletestring(FILE * file, char *buffer) {
+    char next = getnextchar(file);
+    size_t bufferptr = 1;
+    while (next != '\''){
+        buffer[bufferptr++] = next;
+        next = getnextchar(file);
+    }
+     buffer[bufferptr++] = '\'';
+
+}
+
 void walker(FILE *file) {
 
     char curr;
@@ -258,6 +293,10 @@ void walker(FILE *file) {
 
         if(isdigit(curr)) {
             getcompletedigit(file, buffer);
+        }
+
+        if(curr == '\'') {
+            getcompletestring(file, buffer);
         }
 
         if(curr == '=' && peek(file) == '=') {
@@ -283,8 +322,9 @@ void walker(FILE *file) {
         free(t);
         free(buffer);
     
-    } while ( curr != EOF );    
-
+    } while ( curr != EOF );
+    
+    freestringstack();
 }
 
 

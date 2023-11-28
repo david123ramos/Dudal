@@ -2,6 +2,11 @@
     "files.associations": {
         "queue": "c",
         "stack": "c",
-        "random": "c"
+        "random": "c",
+        "ratio": "c",
+        "cmath": "c",
+        "complex": "c",
+        "valarray": "c",
+        "limits": "c"
     }
 }
