@@ -51,7 +51,14 @@ typedef enum {
 typedef struct Token {
     int pos;
     char *value;
-    int len;
+    
+    union{
+        int len;
+        struct Token * right;
+        struct Token * center;
+        struct Token * left;
+    }metadata;
+    
     TokenType type;
 } Token;
 
@@ -115,9 +122,10 @@ Token* lexer(char *curr) {
         token->type = STDOUT_PRINT;
     }else if (strcmp(curr , "if") == 0){
         token->type = IF;
+
     }else if(curr[0] == '\'' && curr[strlen(curr) - 1] == '\'') {
         token->type = STRING;
-        token->len = strlen(curr);
+        token->metadata.len = strlen(curr);
     }else {
         // assert(false && "Syntax error at %d" && pos);
     }
